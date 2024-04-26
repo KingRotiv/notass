@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block titulo_pagina %}Entrar{% endblock %}
+
+{% block head %}
+<script src="{{ url_for('static', path='js/alertas.js') }}"></script>
+{% endblock head %}
+
+{% block header %}
+<h1>Entrar com minha conta</h1>
+{% endblock %}
+
+{% block main %}
+<form id="formEntrar">
+    <div class="mb-3">
+        <label for="apelido" class="form-label">Apelido</label>
+        <input type="text" class="form-control" name="apelido" id="apelido" required>
+    </div>
+    <div class="mb-3">
+        <label for="senha" class="form-label">Senha</label>
+        <input type="password" class="form-control" name="senha" id="senha" required>
+    </div>
+    <button type="submit" class="btn btn-primary m-1">Entrar</button>
+    <a class="btn btn-secondary m-1" role="button"
+        href="{{ url_for('site-usuario-cadastrar').include_query_params(prox=prox) }}">Cadastrar</a>
+</form>
+
+<script>
+    const formEntrar = document.querySelector("#formEntrar")
+    formEntrar.addEventListener("submit", apiAutenticar)
+
+    async function apiAutenticar(e) {
+        e.preventDefault()
+        const obj = new FormData(e.target)
+        let dados = {}
+        obj.forEach((v, c) => dados[c] = v)
+        const api = "{{ url_for('api-usuario-autenticar') }}"
+        const resposta = await fetch(
+            api,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(dados)
+            }
+        )
+        if ([200, 401].includes(resposta.status)) {
+            const resposta_json = await resposta.json()
+            if (resposta.status == 200) {
+                await Alertas.swalToast({}).fire({
+                    icon: "success",
+                    title: "Entrou!"
+                })
+                window.location.replace("{{ prox }}")
+            } else {
+                Alertas.swalToast({}).fire({
+                    icon: "info",
+                    title: resposta_json.detail
+                })
+            }
+        } else {
+            Alertas.swalToast({}).fire({
+                icon: "error",
+                title: "Erro inexperado!"
+            })
+        }
+    }
+</script>
+{% endblock %}

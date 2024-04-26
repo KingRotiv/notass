@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block titulo_pagina %}Minhas Notas{% endblock titulo_pagina %}
+
+{% block head %}
+<script src="{{ url_for('static', path='js/formatadores.js') }}"></script>
+<script src="{{ url_for('static', path='js/alertas.js') }}"></script>
+{% endblock head %}
+
+{% block header %}
+<div class="d-flex flex-row justify-content-between mb-3">
+    <h1>Minhas Notas</h1>
+    <button class="btn btn-success" onclick="manipularNota()"><i class="bi bi-plus-circle"></i> Nova Nota</button>
+</div>
+{% endblock header %}
+
+{% block main %}
+<div class="mb-3">
+    <div class="form-floating">
+        <select class="form-select" id="filtro-ordem" oninput="carregarNotas()">
+            {% for e in filtro_ordem %}
+            <option value="{{ e.value }}">{{ e.value }}</option>
+            {% endfor %}
+        </select>
+        <label for="filtro-ordem">Ordem</label>
+    </div>
+</div>
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-4" id="notas"></div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", async function () {
+        await carregarNotas()
+    })
+
+
+    // Carregar notas
+    async function carregarNotas() {
+        const filtro_ordem = document.querySelector("#filtro-ordem")
+        const notas = document.querySelector("#notas")
+        let api = "{{ url_for('api-nota') }}?"
+        if (filtro_ordem.value) {
+            api += `ordem=${filtro_ordem.value}`
+        }
+        const resposta = await fetch(
+            api,
+            {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            }
+        )
+        if (resposta.ok) {
+            const resposta_json = await resposta.json()
+            if (resposta_json.resultados.length == 0) {
+                notas.innerHTML = "<p>Você ainda não tem nenhuma nota... :(</p>"
+            } else {
+                notas.innerHTML = ""
+            }
+            for (let nota of resposta_json.resultados) {
+                notas.innerHTML += `
+                    <div class="col mb-4">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title titulo-nota-card">${Formatadores.formatarTexto(nota.titulo)}</h5>
+                                <p class="card-text texto-nota-card">${Formatadores.formatarTexto(nota.texto)}</p>
+                                <p class="card-text"><small class="text-body-secondary">${Formatadores.formatarDataParaTempoPassado(nota.data_alteracao).mensagem}</small></p>
+                            </div>
+                            <div class="card-footer">
+                                <button class="btn btn-primary m-1" onclick="abrirNota(${nota.id})">Abrir</button>
+                                <button class="btn btn-danger m-1" onclick="deletarNota(${nota.id})">Deletar</button>
+                            </div>
+                        </div>
+                    </div>
+                `
+            }
+            Alertas.swalToast({}).fire({
+                icon: "success",
+                title: "Notas carregadas!"
+            })
+        } else {
+            Alertas.swal().fire({
+                icon: "error",
+                title: "Falha ao carregar",
+                message: "Não foi possível carregar suas notas."
+            })
+        }
+    }
+
+
+    // Abrir nota
+    async function abrirNota(id) {
+        const api = "{{ url_for('api-nota-id', id='$id') }}".replace("$id", id)
+        const resposta = await fetch(
+            api,
+            {
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            }
+        )
+        if (resposta.ok) {
+            const resposta_json = await resposta.json()
+            const titulo = Formatadores.formatarTexto(resposta_json.titulo)
+            const texto = resposta_json.texto
+            const textoDatas = `Criado: ${Formatadores.formatarData(resposta_json.data_registro)} - Alterado: ${Formatadores.formatarData(resposta_json.data_alteracao)}`
+            Alertas.swal().fire({
+                width: "70%",
+                input: "textarea",
+                title: titulo,
+                inputLabel: textoDatas,
+                inputValue: texto,
+                inputAttributes: {
+                    "readonly": "on",
+                    "style": "height: 40vh;"
+                },
+                confirmButtonText: "Editar",
+                showCloseButton: true,
+                showCancelButton: true,
+                cancelButtonText: "Fechar"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    manipularNota(id, titulo, texto)
+                }
+            })
+        } else {
+            Alertas.swalToast({}).fire({
+                icon: "error",
+                title: "Erro ao carregar!"
+            })
+        }
+    }
+
+
+    // Criar/editar nota
+    async function manipularNota(pre_id = null, pre_titulo = null, pre_texto = null) {
+        const { value: texto } = await Alertas.swal().fire({
+            width: "70%",
+            input: "textarea",
+            title: pre_id ? "Editando Nota" : "Nova Nota",
+            inputValue: pre_texto ?? "",
+            inputPlaceholder: "Digite seu texto aqui...",
+            inputAttributes: {
+                minlength: "1",
+                maxlength: "4000",
+                autocapitalize: "on",
+                style: "height: 40vh;"
+            },
+            confirmButtonText: "Salvar",
+            showCancelButton: true,
+            cancelButtonText: "Fechar",
+            inputValidator: (texto) => {
+                if (!texto) {
+                    return "Não pode salvar uma nota vázia."
+                }
+            }
+        })
+
+        if (texto) {
+            Alertas.swal().fire({
+                input: "text",
+                title: "Título da Nota",
+                inputValue: pre_titulo ?? "",
+                inputPlaceholder: "Digite aqui o título...",
+                confirmButtonText: "Salvar",
+                showCancelButton: true,
+                cancelButtonText: "Fechar",
+                inputAttributes: {
+                    minlength: "1",
+                    maxlength: "50"
+                },
+                inputValidator: (titulo) => {
+                    if (!titulo) {
+                        return "Não pode salvar uma nota sem o título."
+                    }
+                },
+                showLoaderOnConfirm: true,
+                preConfirm: async (titulo) => {
+                    const dados = JSON.stringify({
+                        titulo: titulo,
+                        texto: texto
+                    })
+                    try {
+                        const api = pre_id ? "{{ url_for('api-nota-editar', id='$id') }}".replace("$id", pre_id) : "{{ url_for('api-nota-criar') }}"
+                        const resposta = await fetch(
+                            api,
+                            {
+                                method: pre_id ? "PUT" : "POST",
+                                headers: {
+                                    "Content-Type": "application/json"
+                                },
+                                body: dados
+                            }
+                        )
+                        if (!resposta.ok) {
+                            return Alertas.swal().showValidationMessage(`
+                                ${JSON.stringify(await resposta.json())}
+                            `)
+                        }
+                        await carregarNotas()
+                        return Alertas.swalToast({}).fire({
+                            icon: "success",
+                            title: "Nota salva!"
+                        })
+                    } catch (erro) {
+                        Alertas.swal().showValidationMessage(`
+                            Erro: ${erro}
+                        `)
+                    }
+                }
+            }).then((result) => {
+                if (result.isDismissed) {
+                    abrirNota(pre_id)
+                }
+            })
+        } else if (pre_id != null) {
+            abrirNota(pre_id)
+        }
+    }
+
+
+    // Deletar nota
+    async function deletarNota(id) {
+        Alertas.swal().fire({
+            title: "Deletar Nota?",
+            text: "Após deletado uma nota, ela não poderá ser recuperada.",
+            icon: "warning",
+            showCancelButton: true,
+            cancelButtonText: "Não deletar",
+            confirmButtonText: "Sim, deletar!",
+            showLoaderOnConfirm: true,
+            preConfirm: async (...params) => {
+                try {
+                    const api = "{{ url_for('api-nota-deletar', id='$id') }}".replace("$id", id)
+                    const resposta = await fetch(
+                        api,
+                        {
+                            method: "DELETE",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                        }
+                    )
+                    if (!resposta.ok) {
+                        return Alertas.swal().showValidationMessage(`
+                            ${JSON.stringify(await resposta.json())}
+                        `)
+                    }
+                    await carregarNotas()
+                } catch (erro) {
+                    Alertas.swal().showValidationMessage(`
+                        Erro: ${erro}
+                    `)
+                }
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Alertas.swal().fire({
+                    title: "Deletada!",
+                    text: "Nota deletada com sucesso.",
+                    icon: "success"
+                })
+            }
+        })
+    } 
+</script>
+{% endblock main %}

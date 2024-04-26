@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block titulo_pagina %}Cadastrar{% endblock %}
+
+{% block head %}
+<script src="{{ url_for('static', path='js/alertas.js') }}"></script>
+{% endblock %}
+
+{% block header %}
+<h1>Se cadastrar no site</h1>
+{% endblock %}
+
+{% block main %}
+<form id="formCadastrar">
+    <div class="mb-3">
+        <label for="apelido" class="form-label">Apelido</label>
+        <input type="text" class="form-control" pattern="{{ regex_apelido }}" name="apelido" id="apelido"
+            aria-describedby="apelido-ajuda" required>
+        <div id="apelido-ajuda" class="form-text">O apelido deve conter somente letras e números. Mínimo de 5 caracteres
+            e máximo de 20.</div>
+    </div>
+    <div class="mb-3">
+        <label for="senha" class="form-label">Senha</label>
+        <input type="password" class="form-control" name="senha" id="senha" aria-describedby="senha-ajuda"
+            oninput="analisarSenhas()" pattern="{{ regex_senha }}" required>
+        <div id="senha-ajuda" class="form-text">A senha deve conter ao menos: Um número, uma letra minúscula e uma letra
+            maiúscula. Caracteres especias são permitidos. Mínimo de 8 caracteres e máximo de 30.</div>
+    </div>
+    <div class="mb-3">
+        <label for="senha" class="form-label">Repita a senha</label>
+        <input type="password" class="form-control" oninput="analisarSenhas()" id="re-senha" required>
+        <span class="form-text text-danger" id="status-re-senha"></span>
+    </div>
+    <button type="submit" class="btn btn-primary m-1">Cadastrar</button>
+    <a class="btn btn-secondary m-1" role="button" href="{{ url_for('site-usuario-entrar') }}">Já tenho conta</a>
+</form>
+
+<script>
+    let statusSenha = false
+    const formCadastrar = document.querySelector("#formCadastrar")
+    formCadastrar.addEventListener("submit", apiCriarUsuario)
+
+
+    async function apiCriarUsuario(e) {
+        e.preventDefault()
+        if (statusSenha == false) {
+            await Alertas.swal().fire({
+                icon: "warning",
+                title: "Campos inválidos!",
+                text: "Verifique os campos e tente novamente."
+            })
+            return null
+        }
+        const obj = new FormData(e.target)
+        let dados = {}
+        obj.forEach((v, c) => dados[c] = v)
+        const api = "{{ url_for('api-usuario-criar') }}"
+        const resposta = await fetch(
+            api,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(dados)
+            }
+        )
+        if ([200, 409].includes(resposta.status)) {
+            const resposta_json = await resposta.json()
+            if (resposta.status == 200) {
+                await Alertas.swalToast({}).fire({
+                    icon: "success",
+                    title: "Cadastro realizado!"
+                })
+                window.location.replace("{{ prox }}")
+            } else {
+                await Alertas.swal().fire({
+                    icon: "info",
+                    title: resposta_json.detail
+                })
+            }
+        } else {
+            await Alertas.swalToast({}).fire({
+                icon: "error",
+                title: "Erro inexperado!"
+            })
+        }
+    }
+
+
+    function analisarSenhas(e) {
+        const status = document.querySelector('#status-re-senha')
+        const s1 = document.querySelector("#senha").value
+        const s2 = document.querySelector("#re-senha").value
+        if (s1 != s2) {
+            status.textContent = "Senhas não coincidem."
+            statusSenha = false
+        } else {
+            status.textContent = ""
+            statusSenha = true
+        }
+    }
+</script>
+{% endblock %}

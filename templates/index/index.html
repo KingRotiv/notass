@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block titulo_pagina %}{{ nome_app }}{% endblock%}
+
+{% block header %}
+<h1 class="text-danger">Atenção</h1>
+<p class="text-danger">Este web aplicativo é um projeto demo e nenhuma informação importante deve ser salva nele, pois
+    não há cumprimento de segurança e nem há garantia de persistência dos dados.</p>
+<p class="text-danger">Use apenas para testes e demonstrações.</p>
+{% endblock%}
+
+{% block main %}
+<h2>Sobre mim</h2>
+<p>Bem-vindo(a) ao Notass! Sou um aplicativo web básico de anotações e fico feliz em guardar alguns dos seus
+    pensamentos...</p>
+
+<h2>O que posso fazer?</h2>
+<p>Eu posso salvar suas anotações de forma rápida e fácil.</p>
+{% endblock %}

@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  notass:
+    build: .
+    env_file:
+      - ./.env
+    volumes:
+      - ./sqlite.db:/app/sqlite.db
+    ports:
+      - "80:8000"

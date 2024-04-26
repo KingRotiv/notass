@@ -1,0 +1,12 @@
+.titulo-nota-card {
+    max-width: 100%;
+    text-wrap: nowrap;
+    overflow-x: hidden;
+    text-overflow: ellipsis;
+}
+
+.texto-nota-card {
+    height: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

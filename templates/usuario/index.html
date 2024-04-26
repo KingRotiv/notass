@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block titulo_pagina %}Eu{% endblock titulo_pagina %}
+
+{% block head %}
+<script src="{{ url_for('static', path='js/alertas.js') }}"></script>
+{% endblock %}
+
+{% block header %}
+<h1>Minhas Informações</h1>
+{% endblock header %}
+
+{% block main %}
+<form id="formEditarSenha">
+    <div class="mb-3">
+        <label for="apelido" class="form-label">Apelido</label>
+        <input type="text" class="form-control" value="{{ usuario_atual.apelido }}" id="apelido" readonly>
+    </div>
+    <div class="mb-3">
+        <label for="data-registro" class="form-label">Data de registro</label>
+        <input type="datetime" class="form-control" value="{{ usuario_atual.data_registro|formatar_data }}"
+            id="data-registro" readonly>
+    </div>
+    <div class="mb-3">
+        <label for="senha" class="form-label">Senha atual</label>
+        <input type="password" class="form-control" name="senha" id="senha" required>
+    </div>
+    <div class="mb-3">
+        <label for="nova-senha" class="form-label">Nova senha</label>
+        <input type="password" class="form-control" oninput="analisarSenhas()" pattern="{{ regex_senha }}"
+            name="nova_senha" id="nova-senha" aria-describedby="nova-senha-ajuda" required>
+        <div id="nova-senha-ajuda" class="form-text">A senha deve conter ao menos: Um número, uma letra minúscula e uma
+            letra
+            maiúscula. Caracteres especias são permitidos. Mínimo de 8 caracteres e máximo de 30.</div>
+    </div>
+    <div class="mb-3">
+        <label for="re-nova-senha" class="form-label">Repita a nova senha</label>
+        <input type="password" class="form-control" oninput="analisarSenhas()" pattern="{{ regex_senha }}"
+            id="re-nova-senha" required>
+        <span class="form-text text-danger" id="status-re-nova-senha"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">Salvar</button>
+</form>
+
+<script>
+    let statusSenha = false;
+    function analisarSenhas(e) {
+        const status = document.querySelector('#status-re-nova-senha')
+        const s1 = document.querySelector("#nova-senha").value
+        const s2 = document.querySelector("#re-nova-senha").value
+        if (s1 != s2) {
+            status.textContent = "Senhas não coincidem."
+            statusSenha = false
+        } else {
+            status.textContent = ""
+            statusSenha = true
+        }
+    }
+
+
+    // Editar senha
+    const formEditarSenha = document.querySelector("#formEditarSenha")
+    formEditarSenha.addEventListener("submit", editarSenha)
+
+    async function editarSenha(e) {
+        e.preventDefault()
+        if (statusSenha == false) {
+            await Alertas.swal().fire({
+                icon: "warning",
+                title: "Campos inválidos!",
+                text: "Verifique os campos e tente novamente."
+            })
+            return null
+        }
+        const obj = new FormData(e.target)
+        let dados = {}
+        obj.forEach((v, c) => dados[c] = v)
+        const api = "{{ url_for('api-usuario-editar-senha') }}"
+        const resposta = await fetch(
+            api,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(dados)
+            }
+        )
+        if ([200, 401].includes(resposta.status)) {
+            if (resposta.status == 200) {
+                formEditarSenha.reset()
+                await Alertas.swalToast({}).fire({
+                    icon: "success",
+                    title: "Informações salvas!"
+                })
+            } else {
+                const resposta_json = await resposta.json()
+                await Alertas.swal().fire({
+                    icon: "warning",
+                    title: resposta_json.detail
+                })
+            }
+        } else {
+            await Alertas.swalToast({}).fire({
+                icon: "error",
+                title: "Erro inexperado!"
+            })
+        }
+    }
+</script>
+{% endblock main %}
