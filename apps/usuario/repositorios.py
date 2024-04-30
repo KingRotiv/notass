@@ -104,6 +104,63 @@ def obter_usuario(dados: eq.JWTInfo) -> md.Usuario:
         )
 
 
+def vincular_telegram(
+    usuario_atual: eq.Usuario, autenticar_telegram: eq.AutenticarTelegramRequisicao
+) -> None:
+    """
+    Vincula uma conta Telegram ao usuário atual.
+
+    Args:
+        autenticar_telegram (eq.AutenticarTelegramRequisicao): As credenciais da conta Telegram.
+
+    Returns:
+        None
+    """
+    sq.validar_dados_telegram(autenticar_telegram=autenticar_telegram)
+    with session() as s:
+        q_existe = select(md.Usuario).where(
+            md.Usuario.id_telegram == autenticar_telegram.id
+        )
+        existe = s.execute(q_existe).scalar()
+        if existe:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Já existe uma conta vinculada a esta conta Telegram.",
+            )
+
+        q = select(md.Usuario).where(md.Usuario.id == usuario_atual.id)
+        usuario = s.execute(q).scalar()
+        try:
+            usuario.id_telegram = autenticar_telegram.id
+            s.commit()
+            return None
+        except Exception:
+            s.rollback()
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+def desvincular_telegram(usuario_atual: eq.Usuario) -> None:
+    """
+    Remove a vinculação do usuário atual com uma conta Telegram.
+
+    Args:
+        usuario_atual (eq.Usuario): O usuário que vai remover o telegram.
+
+    Returns:
+        None
+    """
+    with session() as s:
+        q = select(md.Usuario).where(md.Usuario.id == usuario_atual.id)
+        usuario = s.execute(q).scalar()
+        try:
+            usuario.id_telegram = None
+            s.commit()
+            return None
+        except Exception:
+            s.rollback()
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 def autenticar(autenticar: eq.AutenticarRequisicao) -> eq.AutenticarRetorno:
     """
     Autentica um usuário no sistema.
@@ -129,4 +186,37 @@ def autenticar(autenticar: eq.AutenticarRequisicao) -> eq.AutenticarRetorno:
             return eq.AutenticarRetorno(token=token)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciais inválidas."
+        )
+
+
+def autenticar_telegram(
+    autenticar_telegram: eq.AutenticarTelegramRequisicao,
+) -> eq.AutenticarRetorno:
+    """
+    Autentica um usuário no sistema pelo telegram.
+
+    Args:
+        autenticar_telegram (eq.AutenticarTelegramRequisicao): As credenciais do usuário.
+
+    Raises:
+        HTTPException: Se as credenciais informadas forem inválidas.
+
+    Returns:
+        eq.AutenticarRetorno: O token de autenticação.
+    """
+    if not sq.validar_dados_telegram(autenticar_telegram):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciais inválidas."
+        )
+    with session() as s:
+        q = select(md.Usuario).where(md.Usuario.id_telegram == autenticar_telegram.id)
+        usuario = s.execute(q).scalar()
+        if usuario:
+            token = sq.gerar_token_jwt(
+                dados=eq.JWTInfo(apelido=usuario.apelido, id=usuario.id)
+            )
+            return eq.AutenticarRetorno(token=token)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Não existe conta no sistema vinculada a esta conta Telegram.",
         )

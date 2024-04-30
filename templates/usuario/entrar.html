@@ -1,3 +1,5 @@
+{% import "widgets.html" as widgets with context %}
+
 {% extends "base.html" %}
 
 {% block titulo_pagina %}Entrar{% endblock %}
@@ -20,16 +22,21 @@
         <label for="senha" class="form-label">Senha</label>
         <input type="password" class="form-control" name="senha" id="senha" required>
     </div>
-    <button type="submit" class="btn btn-primary m-1">Entrar</button>
-    <a class="btn btn-secondary m-1" role="button"
+    <button type="submit" class="btn btn-primary me-1">Entrar</button>
+    <a class="btn btn-secondary" role="button"
         href="{{ url_for('site-usuario-cadastrar').include_query_params(prox=prox) }}">Cadastrar</a>
 </form>
+<div class="mt-3">
+    <p class="form-label">Outras formas de entrar</p>
+    {{ widgets.telegram_login(telegram_bot_nome, "autenticarTelegram") }}
+</div>
 
 <script>
+    // Autenticar normal
     const formEntrar = document.querySelector("#formEntrar")
-    formEntrar.addEventListener("submit", apiAutenticar)
+    formEntrar.addEventListener("submit", autenticar)
 
-    async function apiAutenticar(e) {
+    async function autenticar(e) {
         e.preventDefault()
         const obj = new FormData(e.target)
         let dados = {}
@@ -63,6 +70,43 @@
             Alertas.swalToast({}).fire({
                 icon: "error",
                 title: "Erro inexperado!"
+            })
+        }
+    }
+
+
+    // Autenticar via Telegram
+    async function autenticarTelegram(dados) {
+        const api = "{{ url_for('api-usuario-autenticar-telegram') }}"
+        const resposta = await fetch(
+            api,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(dados)
+            }
+        )
+        if ([200, 401].includes(resposta.status)) {
+            const resposta_json = await resposta.json()
+            if (resposta.status == 200) {
+                await Alertas.swalToast({}).fire({
+                    icon: "success",
+                    title: "Entrou via Telegram!"
+                })
+                window.location.replace("{{ prox }}")
+            } else {
+                Alertas.swal().fire({
+                    icon: "info",
+                    title: "Autenticação via Telegram",
+                    text: resposta_json.detail
+                })
+            }
+        } else {
+            Alertas.swalToast({}).fire({
+                icon: "error",
+                title: "Erro inesperado!"
             })
         }
     }

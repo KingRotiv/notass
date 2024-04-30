@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Response, Depends
+from fastapi import APIRouter, Request, Response, Depends
+from fastapi.responses import RedirectResponse
 
 from utils import seguranca as sq
 from dependencias import usuario_atual_api
@@ -46,6 +47,49 @@ def editar_senha(
     return rp.editar_senha(editar_senha=editar_senha, usuario_atual=usuario_atual)
 
 
+@rota.put(
+    "/vincular-telegram/", response_model=None, name="api-usuario-vincular-telegram"
+)
+def vincular_telegram(
+    *,
+    usuario_atual: eq.Usuario = Depends(usuario_atual_api),
+    autenticar_telegram: eq.AutenticarTelegramRequisicao,
+) -> None:
+    """
+    Vincula uma conta Telegram ao usuário atual.
+
+    Args:
+        autenticar_telegram (eq.AutenticarTelegramRequisicao): As credenciais da conta Telegram.
+        usuario_atual (eq.Usuário): O usuário.
+
+    Returns:
+        None
+    """
+    return rp.vincular_telegram(
+        usuario_atual=usuario_atual, autenticar_telegram=autenticar_telegram
+    )
+
+
+@rota.delete(
+    "/desvincular-telegram/",
+    response_model=None,
+    name="api-usuario-desvincular-telegram",
+)
+def desvincular_telegram(
+    usuario_atual: eq.Usuario = Depends(usuario_atual_api),
+) -> None:
+    """
+    Remove a vinculação do usuário atual com uma conta Telegram.
+
+    Args:
+        usuario_atual (eq.Usuário): O usuário atual.
+
+    Returns:
+        None
+    """
+    return rp.desvincular_telegram(usuario_atual=usuario_atual)
+
+
 @rota.post(
     "/autenticar",
     response_model=eq.AutenticarRetorno,
@@ -70,3 +114,40 @@ def autenticar(
         max_age=sq.expiracao_cookie_usuario_atual(),
     )
     return resposta
+
+
+@rota.post(
+    "/autenticar-telegram/",
+    response_model=eq.AutenticarRetorno,
+    name="api-usuario-autenticar-telegram",
+)
+def autenticar_telegram(
+    request: Request,
+    response: Response,
+    autenticar_telegram: eq.AutenticarTelegramRequisicao,
+    prox: str = None,
+) -> eq.AutenticarRetorno | RedirectResponse:
+    """
+    Inicia o processo de autenticação de um usuário pelo telegram.
+
+    Args:
+        autenticar_telegram (eq.AutenticarTelegramRequisicao): As credenciais do usuário.
+
+    Returns:
+        eq.AutenticarRetorno: O token de autenticação.
+        RedirectResponse: Redireciona o usuário para a proxima rota.
+    """
+    resposta = rp.autenticar_telegram(autenticar_telegram)
+    cookie = dict(
+        key="usuario_atual",
+        value=resposta.token,
+        max_age=sq.expiracao_cookie_usuario_atual(),
+    )
+    if not prox:
+        response.set_cookie(**cookie)
+        return resposta
+    else:
+        prox = sq.validar_redirecionamento(request=request, prox=prox)
+        redirect = RedirectResponse(url=prox)
+        redirect.set_cookie(**cookie)
+        return redirect

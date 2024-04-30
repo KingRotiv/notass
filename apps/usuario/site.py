@@ -27,6 +27,7 @@ def index(
     dados = {
         "request": request,
         "usuario_atual": usuario_atual,
+        "telegram_bot_nome": config.TELEGRAM_BOT_NOME,
         "regex_senha": config.REGEX_SENHA,
     }
     return templates.TemplateResponse(name="usuario/index.html", context=dados)
@@ -50,7 +51,12 @@ def entrar(
     prox = sq.validar_redirecionamento(
         request=request, prox=prox if prox else request.url_for("site-nota").path
     )
-    dados = {"request": request, "usuario_atual": usuario_atual, "prox": prox}
+    dados = {
+        "request": request,
+        "usuario_atual": usuario_atual,
+        "telegram_bot_nome": config.TELEGRAM_BOT_NOME,
+        "prox": prox,
+    }
     return templates.TemplateResponse(name="usuario/entrar.html", context=dados)
 
 

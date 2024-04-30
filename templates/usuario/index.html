@@ -1,3 +1,5 @@
+{% import "widgets.html" as widgets with context %}
+
 {% extends "base.html" %}
 
 {% block titulo_pagina %}Eu{% endblock titulo_pagina %}
@@ -16,6 +18,12 @@
         <label for="apelido" class="form-label">Apelido</label>
         <input type="text" class="form-control" value="{{ usuario_atual.apelido }}" id="apelido" readonly>
     </div>
+    {% if usuario_atual.id_telegram %}
+    <div class="mb-3">
+        <label for="id-telegram" class="form-label">ID Telegram</label>
+        <input type="number" class="form-control" value="{{ usuario_atual.id_telegram }}" id="id-telegram" readonly>
+    </div>
+    {% endif %}
     <div class="mb-3">
         <label for="data-registro" class="form-label">Data de registro</label>
         <input type="datetime" class="form-control" value="{{ usuario_atual.data_registro|formatar_data }}"
@@ -39,8 +47,23 @@
             id="re-nova-senha" required>
         <span class="form-text text-danger" id="status-re-nova-senha"></span>
     </div>
-    <button type="submit" class="btn btn-primary">Salvar</button>
+    <button type="submit" class="btn btn-primary me-1">Salvar</button>
+    {% if usuario_atual.id_telegram %}
+    <button type="button" class="btn btn-danger" onclick="desvincularTelegram()">Desvincular Telegram</button>
+    {% else %}
+    <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse"
+        data-bs-target="#collapseVincularTelegram">
+        Vincular Telegram
+    </button>
+    {% endif %}
 </form>
+
+{% if not usuario_atual.id_telegram %}
+<div class="collapse mt-3" id="collapseVincularTelegram">
+    <p>Para vincular sua conta a uma conta Telegram, clique no botão abaixo.</p>
+    {{ widgets.telegram_login(telegram_bot_nome, "vincularTelegram") }}
+</div>
+{% endif %}
 
 <script>
     let statusSenha = false;
@@ -106,6 +129,85 @@
                 title: "Erro inexperado!"
             })
         }
+    }
+
+
+    // Vincular Telegram
+    async function vincularTelegram(dados) {
+        const api = "{{ url_for('api-usuario-vincular-telegram') }}"
+        const resposta = await fetch(
+            api,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(dados)
+            }
+        )
+        if ([200, 401, 409].includes(resposta.status)) {
+            const resposta_json = await resposta.json()
+            if (resposta.status == 200) {
+                await Alertas.swalToast({}).fire({
+                    icon: "success",
+                    title: "Vinculado!"
+                })
+                window.location.reload()
+            } else {
+                Alertas.swal().fire({
+                    icon: "info",
+                    title: "Vinculação Telegram",
+                    text: resposta_json.detail
+                })
+            }
+        } else {
+            Alertas.swalToast({}).fire({
+                icon: "error",
+                title: "Erro inesperado!"
+            })
+        }
+    }
+
+
+    // Desvincular Telegram
+    async function desvincularTelegram() {
+        Alertas.swal().fire({
+            icon: "question",
+            title: "Desvincular Telegram?",
+            text: "Se desvincular a conta, não poderá mais usar os bots ou entrar via Telegram.",
+            showCancelButton: true,
+            cancelButtonText: "Não",
+            confirmButtonText: "Sim",
+            showLoaderOnConfirm: true,
+            preConfirm: async (...params) => {
+                try {
+                    const api = "{{ url_for('api-usuario-desvincular-telegram') }}"
+                    const resposta = await fetch(
+                        api,
+                        {
+                            method: "DELETE",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                        }
+                    )
+                    if (!resposta.ok) {
+                        return Alertas.swal().showValidationMessage(`
+                            ${JSON.stringify(await resposta.json())}
+                        `)
+                    }
+                    await Alertas.swalToast({}).fire({
+                        icon: "success",
+                        title: "Desvinculado!"
+                    })
+                    return window.location.reload()
+                } catch (erro) {
+                    Alertas.swal().showValidationMessage(`
+                        Erro: ${erro}
+                    `)
+                }
+            }
+        })
     }
 </script>
 {% endblock main %}

@@ -31,17 +31,31 @@
         <input type="password" class="form-control" oninput="analisarSenhas()" id="re-senha" required>
         <span class="form-text text-danger" id="status-re-senha"></span>
     </div>
-    <button type="submit" class="btn btn-primary m-1">Cadastrar</button>
-    <a class="btn btn-secondary m-1" role="button" href="{{ url_for('site-usuario-entrar') }}">Já tenho conta</a>
+    <button type="submit" class="btn btn-primary me-1">Cadastrar</button>
+    <a class="btn btn-secondary" role="button" href="{{ url_for('site-usuario-entrar') }}">Já tenho conta</a>
 </form>
 
 <script>
     let statusSenha = false
+    function analisarSenhas(e) {
+        const status = document.querySelector('#status-re-senha')
+        const s1 = document.querySelector("#senha").value
+        const s2 = document.querySelector("#re-senha").value
+        if (s1 != s2) {
+            status.textContent = "Senhas não coincidem."
+            statusSenha = false
+        } else {
+            status.textContent = ""
+            statusSenha = true
+        }
+    }
+
+
+    // Cria usuário
     const formCadastrar = document.querySelector("#formCadastrar")
-    formCadastrar.addEventListener("submit", apiCriarUsuario)
+    formCadastrar.addEventListener("submit", criarUsuario)
 
-
-    async function apiCriarUsuario(e) {
+    async function criarUsuario(e) {
         e.preventDefault()
         if (statusSenha == false) {
             await Alertas.swal().fire({
@@ -82,22 +96,8 @@
         } else {
             await Alertas.swalToast({}).fire({
                 icon: "error",
-                title: "Erro inexperado!"
+                title: "Erro inesperado!"
             })
-        }
-    }
-
-
-    function analisarSenhas(e) {
-        const status = document.querySelector('#status-re-senha')
-        const s1 = document.querySelector("#senha").value
-        const s2 = document.querySelector("#re-senha").value
-        if (s1 != s2) {
-            status.textContent = "Senhas não coincidem."
-            statusSenha = false
-        } else {
-            status.textContent = ""
-            statusSenha = true
         }
     }
 </script>

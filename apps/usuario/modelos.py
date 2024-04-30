@@ -16,5 +16,6 @@ class Usuario(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     apelido: Mapped[str] = mapped_column(String(20), unique=True)
     senha_hashed: Mapped[str] = mapped_column(String(60))
+    id_telegram: Mapped[int | None] = mapped_column(unique=True, nullable=True)
     data_registro: Mapped[datetime] = mapped_column(default=datetime.now)
     notas: Mapped[list["Nota"]] = relationship(backref="nota")

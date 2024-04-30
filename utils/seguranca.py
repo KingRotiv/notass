@@ -1,4 +1,7 @@
 import re
+import hmac
+import hashlib
+from datetime import datetime, timedelta
 
 import bcrypt
 from jose import JWTError, jwt
@@ -102,3 +105,49 @@ def validar_redirecionamento(request: Request, prox: str) -> str:
         if not prox_valido:
             prox = request.url_for("site-index")
     return prox
+
+
+def validar_dados_telegram(
+    autenticar_telegram: eq_usuario.AutenticarTelegramRequisicao,
+) -> bool:
+    """
+    Valida os dados do Telegram.
+
+    Args:
+        autenticar_telegram (eq_usuario.AutenticarTelegramRequisicao): Os dados do telegram.
+
+    Returns:
+        bool: True se os dados foram validos e False caso contrário.
+    """
+    token_bot = config.TELEGRAM_BOT_TOKEN
+    try:
+        chave_secreta = hashlib.sha256(token_bot.encode()).digest()
+        dados = dict(
+            auth_date=autenticar_telegram.auth_date,
+            first_name=autenticar_telegram.first_name,
+            hash=autenticar_telegram.hash,
+            id=autenticar_telegram.id,
+            last_name=autenticar_telegram.last_name,
+            photo_url=autenticar_telegram.photo_url,
+            username=autenticar_telegram.username,
+        )
+        hash_origem = dados.get("hash")
+        dados.pop("hash")
+
+        _ = [f"{c}={v}" if v else None for c, v in dados.items()]
+        _ = list(filter(None, _))
+        mensagem = "\n".join(_)
+        hash_mensagem = hmac.new(
+            key=chave_secreta, msg=mensagem.encode(), digestmod=hashlib.sha256
+        ).hexdigest()
+        hashs_iguais = hmac.compare_digest(hash_mensagem, hash_origem)
+        expiracao_valida = (
+            datetime.fromtimestamp(autenticar_telegram.auth_date)
+            + timedelta(minutes=config.JWT_EXPIRACAO_ACESSO_MINUTOS)
+            > datetime.now()
+        )
+        if hashs_iguais and expiracao_valida:
+            return True
+        return False
+    except Exception:
+        return False

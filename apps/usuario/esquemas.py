@@ -73,6 +73,7 @@ class Usuario(BaseModel):
 
     id: int
     apelido: str
+    id_telegram: int | None
     data_registro: datetime
 
 
@@ -118,3 +119,26 @@ class JWTInfo(BaseModel):
                 minutes=config.JWT_EXPIRACAO_ACESSO_MINUTOS
             )
         return self
+
+
+class AutenticarTelegramRequisicao(BaseModel):
+    """
+    Esquema de dados para autenticação de um usuário pelo telegram.
+
+    Attributtes:
+        id (int): O id do telegram.
+        first_name (str): O primeiro nome do usuário no telegram.
+        last_name (str): O sobrenome do usuário no telegram.
+        username (str): O nome de usuário no telegram.
+        photo_url (str): A imagem de perfil do usuário no telegram.
+        auth_date (int): A data de autenticação do usuário no telegram.
+        hash (str): O hash da autenticação do usuário no telegram.
+    """
+
+    id: int
+    first_name: str = ""
+    last_name: str = ""
+    username: str = ""
+    photo_url: str = ""
+    auth_date: int
+    hash: str

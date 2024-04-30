@@ -4,6 +4,10 @@ from decouple import config
 # Geral
 NOME_APP = "Notass"
 
+# Telegram bot
+TELEGRAM_BOT_TOKEN = config("TELEGRAM_BOT_TOKEN")
+TELEGRAM_BOT_NOME = config("TELEGRAM_BOT_NOME")
+
 # Segurança
 JWT_EXPIRACAO_ACESSO_MINUTOS = config("JWT_EXPIRACAO_ACESSO_MINUTOS", cast=int)
 JWT_CHAVE_SECRETA = config("JWT_CHAVE_SECRETA")
