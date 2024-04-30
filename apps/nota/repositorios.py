@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from loguru import logger
 from fastapi import status
 from fastapi.exceptions import HTTPException
 
@@ -20,6 +21,7 @@ def obter_notas(
     Returns:
         eq.ResultadoPesquisa: Resultado da pesquisa.
     """
+    logger.info(f"Obtendo notas do usuário {usuario_atual.apelido}")
     with session() as s:
         q = (
             select(md.Nota)
@@ -58,7 +60,9 @@ def obter_nota(id: int, usuario_atual: eq_usuario.Usuario) -> md.Nota:
         )
         r = s.execute(q).scalar()
         if r:
+            logger.info(f"Obtendo nota {id} do usuário {usuario_atual.apelido}")
             return r
+        logger.info(f"Nota {id} do usuário {usuario_atual.apelido} não encontrada")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Nota não encontrada."
         )
@@ -89,10 +93,11 @@ def editar_nota(
                 setattr(nota, k, v)
             s.commit()
             s.refresh(nota)
+            logger.info(f"Nota {id} do usuário {usuario_atual.apelido} editada")
             return nota
         except Exception as ex:
-            print(ex)
             s.rollback()
+            logger.exception(ex)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -116,9 +121,11 @@ def criar_nota(nova_nota: eq.NovaNota, usuario_atual: eq_usuario.Usuario) -> md.
             s.add(nota)
             s.commit()
             s.refresh(nota)
+            logger.info(f"Nota {nota.id} do usuário {usuario_atual.apelido} criada")
             return nota
-        except Exception:
+        except Exception as ex:
             s.rollback()
+            logger.exception(ex)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -142,7 +149,9 @@ def deletar_nota(id: int, usuario_atual: eq_usuario.Usuario) -> md.Nota:
         try:
             s.delete(nota)
             s.commit()
+            logger.info(f"Nota {id} do usuário {usuario_atual.apelido} deletada")
             return nota
-        except Exception:
+        except Exception as ex:
             s.rollback()
+            logger.exception(ex)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)

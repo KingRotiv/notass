@@ -1,8 +1,10 @@
 import os
+from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from loguru import logger
 
 import config
 from db import iniciar_db
@@ -18,7 +20,18 @@ from apps.nota.api import rota as api_nota
 full_path = os.path.realpath(__file__)
 path = os.path.dirname(full_path)
 
-app = FastAPI(title=config.NOME_APP, lifespan=iniciar_db)
+
+@asynccontextmanager
+async def iniciar(*args):
+    iniciar_db()
+    logger.add(
+        os.path.join(path, "logs", "{time}.log"), rotation="00:00", retention="30 days"
+    )
+    logger.info("Iniciado")
+    yield
+
+
+app = FastAPI(title=config.NOME_APP, lifespan=iniciar)
 app.mount(
     "/static",
     StaticFiles(directory=os.path.join(path, "templates", "static")),

@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from loguru import logger
 from fastapi import status
 from fastapi.exceptions import HTTPException
 
@@ -39,9 +40,11 @@ def criar_usuario(novo_usuario: eq.NovoUsuario) -> eq.AutenticarRetorno:
             token = sq.gerar_token_jwt(
                 dados=eq.JWTInfo(apelido=usuario.apelido, id=usuario.id)
             )
+            logger.info(f"Usuário {novo_usuario.apelido} criado")
             return eq.AutenticarRetorno(token=token)
-        except Exception:
+        except Exception as ex:
             s.rollback()
+            logger.exception(ex)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -73,9 +76,11 @@ def editar_senha(editar_senha: eq.EditarSenha, usuario_atual: eq.Usuario) -> Non
         try:
             usuario.senha_hashed = editar_senha._nova_senha_hashed
             s.commit()
+            logger.info(f"Senha do usuário {usuario.apelido} alterada")
             return None
-        except Exception:
+        except Exception as ex:
             s.rollback()
+            logger.exception(ex)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -98,7 +103,9 @@ def obter_usuario(dados: eq.JWTInfo) -> md.Usuario:
         )
         r = s.execute(q).scalar()
         if r:
+            logger.info(f"Obtendo o usuário {dados.apelido}")
             return r
+        logger.info(f"Usuário {dados.apelido} não encontrado")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Usuário não encontrado."
         )
@@ -133,9 +140,13 @@ def vincular_telegram(
         try:
             usuario.id_telegram = autenticar_telegram.id
             s.commit()
+            logger.info(
+                f"Conta Telegram {autenticar_telegram.id} vinculada ao usuário {usuario.apelido}"
+            )
             return None
-        except Exception:
+        except Exception as ex:
             s.rollback()
+            logger.exception(ex)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -153,11 +164,16 @@ def desvincular_telegram(usuario_atual: eq.Usuario) -> None:
         q = select(md.Usuario).where(md.Usuario.id == usuario_atual.id)
         usuario = s.execute(q).scalar()
         try:
+            _id_telegram = usuario.id_telegram
             usuario.id_telegram = None
             s.commit()
+            logger.info(
+                f"Conta Telegram {_id_telegram} desvinculada do usuário {usuario.apelido}"
+            )
             return None
-        except Exception:
+        except Exception as ex:
             s.rollback()
+            logger.exception(ex)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -183,7 +199,9 @@ def autenticar(autenticar: eq.AutenticarRequisicao) -> eq.AutenticarRetorno:
             token = sq.gerar_token_jwt(
                 dados=eq.JWTInfo(apelido=usuario.apelido, id=usuario.id)
             )
+            logger.info(f"Usuário {usuario.apelido} autenticado via senha")
             return eq.AutenticarRetorno(token=token)
+        logger.info(f"Usuário {autenticar.apelido} não autenticado via senha")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciais inválidas."
         )
@@ -215,7 +233,9 @@ def autenticar_telegram(
             token = sq.gerar_token_jwt(
                 dados=eq.JWTInfo(apelido=usuario.apelido, id=usuario.id)
             )
+            logger.info(f"Usuário autenticado via Telegram {autenticar_telegram.id}")
             return eq.AutenticarRetorno(token=token)
+        logger.info(f"Usuário não autenticado via Telegram {autenticar_telegram.id}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Não existe conta no sistema vinculada a esta conta Telegram.",
