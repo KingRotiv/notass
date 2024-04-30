@@ -20,7 +20,8 @@
     </div>
     {% if usuario_atual.id_telegram %}
     <div class="mb-3">
-        <label for="id-telegram" class="form-label">ID Telegram</label>
+        <label for="id-telegram" class="form-label">ID Telegram (<a href="{{ telegram_bot_url }}"
+                target="_blank">acessar bot)</a></label>
         <input type="number" class="form-control" value="{{ usuario_atual.id_telegram }}" id="id-telegram" readonly>
     </div>
     {% endif %}

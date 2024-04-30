@@ -28,6 +28,7 @@ def index(
         "request": request,
         "usuario_atual": usuario_atual,
         "telegram_bot_nome": config.TELEGRAM_BOT_NOME,
+        "telegram_bot_url": config.TELEGRAM_BOT_URL,
         "regex_senha": config.REGEX_SENHA,
     }
     return templates.TemplateResponse(name="usuario/index.html", context=dados)

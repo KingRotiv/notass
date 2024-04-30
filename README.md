@@ -1,7 +1,8 @@
 # Notass
 Projeto básico para demonstrar um web aplicativo de notas criado com Python.
 
-Demo: https://notass.discloud.app/
+Demo: https://notass.discloud.app/  
+Bot Telegram: https://github.com/KingRotiv/notass-telegram-bot
 
 ## Observações
 Não foram adotadas medidas profundas de segurança nem nada do tipo, somente foi adicionado o básico para o projeto funcionar.
